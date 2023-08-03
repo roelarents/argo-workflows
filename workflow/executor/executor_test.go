@@ -82,6 +82,99 @@ func TestWorkflowExecutor_LoadArtifacts(t *testing.T) {
 	}
 }
 
+func TestWorkflowExecutor_newDriverArt_KeyAndBucketOnly(t *testing.T) {
+	tests := []struct {
+		name                string
+		artifactKeyOnly     wfv1.Artifact
+		tmplArchiveLocation wfv1.ArtifactLocation
+		artifactExpected    wfv1.Artifact
+	}{
+		{
+			name: "S3: not only key but also bucket, but not endpoint, so not hasLocation",
+			artifactKeyOnly: wfv1.Artifact{
+				Name: "foo",
+				ArtifactLocation: wfv1.ArtifactLocation{
+					S3: &wfv1.S3Artifact{
+						S3Bucket: wfv1.S3Bucket{
+							Bucket: "my-bucket",
+						},
+						Key: "my-key",
+					},
+				},
+			},
+			tmplArchiveLocation: wfv1.ArtifactLocation{
+				S3: &wfv1.S3Artifact{
+					Key: "default-key-if-any-should-be-ignored",
+					S3Bucket: wfv1.S3Bucket{
+						Bucket:   "default-bucket",
+						Endpoint: "default-endpoint",
+					},
+				},
+			},
+			artifactExpected: wfv1.Artifact{
+				Name: "foo",
+				ArtifactLocation: wfv1.ArtifactLocation{
+					S3: &wfv1.S3Artifact{
+						S3Bucket: wfv1.S3Bucket{
+							Bucket:   "my-bucket",
+							Endpoint: "default-endpoint",
+						},
+						Key: "my-key",
+					},
+				},
+			},
+		},
+		{
+			name: "Azure: not only blob but also container, but not endpoint, so not hasLocation",
+			artifactKeyOnly: wfv1.Artifact{
+				Name: "foo",
+				ArtifactLocation: wfv1.ArtifactLocation{
+					Azure: &wfv1.AzureArtifact{
+						AzureBlobContainer: wfv1.AzureBlobContainer{
+							Container: "my-container",
+						},
+						Blob: "my-blob",
+					},
+				},
+			},
+			tmplArchiveLocation: wfv1.ArtifactLocation{
+				Azure: &wfv1.AzureArtifact{
+					Blob: "default-blob-if-any-should-be-ignored",
+					AzureBlobContainer: wfv1.AzureBlobContainer{
+						Container: "default-container",
+						Endpoint:  "default-endpoint",
+					},
+				},
+			},
+			artifactExpected: wfv1.Artifact{
+				Name: "foo",
+				ArtifactLocation: wfv1.ArtifactLocation{
+					Azure: &wfv1.AzureArtifact{
+						AzureBlobContainer: wfv1.AzureBlobContainer{
+							Container: "my-container",
+							Endpoint:  "default-endpoint",
+						},
+						Blob: "my-blob",
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			we := WorkflowExecutor{
+				Template: wfv1.Template{
+					ArchiveLocation: &test.tmplArchiveLocation,
+				},
+			}
+			newArtifact, err := we.newDriverArt(&test.artifactKeyOnly)
+			if assert.NoError(t, err) {
+				assert.Equal(t, test.artifactExpected, *newArtifact)
+			}
+		})
+	}
+}
+
 func TestSaveParameters(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset()
 	mockRuntimeExecutor := mocks.ContainerRuntimeExecutor{}
