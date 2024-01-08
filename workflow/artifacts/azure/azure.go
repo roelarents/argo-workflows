@@ -377,7 +377,12 @@ func (azblobDriver *ArtifactDriver) ListObjects(artifact *wfv1.Artifact) ([]stri
 	}
 	ctx := context.TODO()
 	pager := containerClient.NewListBlobsFlatPager(&listOpts)
+	var i int
 	for pager.More() {
+		i++
+		if i < 100 {
+			log.WithFields(log.Fields{"i": i}).Info("Listing blobs in Azure Blob Storage -> pager.More()")
+		}
 		resp, err := pager.NextPage(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error listing blobs %s in Azure Blob Storage container: %s", artifact.Azure.Blob, err)
@@ -386,6 +391,7 @@ func (azblobDriver *ArtifactDriver) ListObjects(artifact *wfv1.Artifact) ([]stri
 			files = append(files, *v.Name)
 		}
 	}
+	log.Info("Listing blobs in Azure Blob Storage -> finished!")
 	return files, nil
 }
 
