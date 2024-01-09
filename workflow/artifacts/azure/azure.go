@@ -152,6 +152,7 @@ func (azblobDriver *ArtifactDriver) Load(artifact *wfv1.Artifact, path string) e
 
 // DownloadFile downloads a single file from Azure Blob Storage
 func DownloadFile(containerClient *container.Client, blobName, path string) error {
+	log.WithFields(log.Fields{"blobName": blobName, "path": path}).Info("Start downloading file")
 	blobClient := containerClient.NewBlobClient(blobName)
 
 	err := os.MkdirAll(filepath.Dir(path), 0755)
@@ -162,13 +163,19 @@ func DownloadFile(containerClient *container.Client, blobName, path string) erro
 	if err != nil {
 		return fmt.Errorf("unable to create file %s: %s", path, err)
 	}
+
+	log.WithFields(log.Fields{"dir": filepath.Dir(path)}).Info("Ensured dir")
 	defer func() {
+		log.WithFields(log.Fields{"file": outFile.Name()}).Info("Closing outFile")
 		if err := outFile.Close(); err != nil {
 			log.Warnf("unable to close file: %s", err)
 		}
+		log.WithFields(log.Fields{"file": outFile.Name()}).Info("Closed outFile")
 	}()
 
-	_, err = blobClient.DownloadFile(context.TODO(), outFile, nil)
+	log.WithFields(log.Fields{"file": outFile.Name()}).Info("Start blobClient.DownloadFile")
+	writeSize, err := blobClient.DownloadFile(context.TODO(), outFile, nil)
+	log.WithFields(log.Fields{"file": outFile.Name(), "writeSize": writeSize, "err": err}).Info("Finished blobClient.DownloadFile")
 	return err
 }
 
@@ -182,14 +189,18 @@ func (azblobDriver *ArtifactDriver) DownloadDirectory(containerClient *container
 		return fmt.Errorf("unable to list blob %s in Azure Storage: %s", artifact.Azure.Blob, err)
 	}
 
+	log.WithFields(log.Fields{"path": path}).Info("MkdirAll")
+
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to create local directory %s: %s", path, err)
 	}
 
+	log.WithFields(log.Fields{"filesCount": len(files)}).Info("Start downloading files")
 	for _, file := range files {
 		// For ADLS Gen 2 accounts, we'll see a file whose name matches the directory. Skip it.
 		if file == artifact.Azure.Blob {
+			log.WithFields(log.Fields{"file": file}).Info("File matched directory name, skipping")
 			continue
 		}
 
