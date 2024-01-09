@@ -212,6 +212,7 @@ func (we *WorkflowExecutor) LoadArtifacts(ctx context.Context) error {
 			}
 			return fmt.Errorf("artifact %s failed to load: %w", art.Name, err)
 		}
+		log.WithFields(log.Fields{"tempArtPath": tempArtPath}).Info("Finished artDriver.Load")
 
 		isTar := false
 		isZip := false
@@ -229,18 +230,24 @@ func (we *WorkflowExecutor) LoadArtifacts(ctx context.Context) error {
 			// auto-detect if tarball
 			// (don't try to autodetect zip files for backwards compatibility)
 			isTar, err = isTarball(tempArtPath)
+			log.WithFields(log.Fields{"tempArtPath": tempArtPath, "err": err}).Error("Error determining isTarball")
 			if err != nil {
 				return err
 			}
 		}
 
+		log.WithFields(log.Fields{"isTar": isTar, "isZip": isZip}).Info("Determined whether file is an archive.")
+
 		if isTar {
+			log.WithFields(log.Fields{"tempArtPath": tempArtPath, "artPath": artPath}).Info("Untarring...")
 			err = untar(tempArtPath, artPath)
 			_ = os.Remove(tempArtPath)
 		} else if isZip {
+			log.WithFields(log.Fields{"tempArtPath": tempArtPath, "artPath": artPath}).Info("Unzipping...")
 			err = unzip(tempArtPath, artPath)
 			_ = os.Remove(tempArtPath)
 		} else {
+			log.WithFields(log.Fields{"tempArtPath": tempArtPath, "artPath": artPath}).Info("Renaming...")
 			err = os.Rename(tempArtPath, artPath)
 		}
 		if err != nil {

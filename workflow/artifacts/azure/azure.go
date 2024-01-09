@@ -391,7 +391,7 @@ func (azblobDriver *ArtifactDriver) ListObjects(artifact *wfv1.Artifact) ([]stri
 			files = append(files, *v.Name)
 		}
 	}
-	log.Info("Listing blobs in Azure Blob Storage -> finished!")
+	log.WithFields(log.Fields{"filesCount": len(files)}).Info("Listing blobs in Azure Blob Storage -> finished!")
 	return files, nil
 }
 
