@@ -3,7 +3,6 @@ package azure
 import (
 	"context"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"io"
 	"net/url"
 	"os"
@@ -169,9 +168,7 @@ func DownloadFile(containerClient *container.Client, blobName, path string) erro
 		}
 	}()
 
-	log.WithFields(log.Fields{"file": outFile.Name()}).Info("Start blobClient.DownloadFile")
-	writeSize, err := blobClient.DownloadFile(context.TODO(), outFile, &blob.DownloadFileOptions{Concurrency: 1})
-	log.WithFields(log.Fields{"file": outFile.Name(), "writeSize": writeSize, "err": err}).Info("Finished blobClient.DownloadFile")
+	_, err = blobClient.DownloadFile(context.TODO(), outFile, nil)
 	return err
 }
 
